@@ -1,14 +1,41 @@
 
 import { Link } from "react-router-dom";
-import { ShoppingBag, LogOut } from "lucide-react";
+import { ShoppingBag, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { useEffect, useState } from "react";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    const getProfile = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("username, full_name")
+          .eq("id", session.user.id)
+          .single();
+
+        if (error) throw error;
+        setUserName(profile.full_name || profile.username);
+      } catch (error: any) {
+        console.error("Error fetching profile:", error.message);
+      }
+    };
+
+    getProfile();
+  }, [navigate]);
 
   const handleLogout = async () => {
     try {
@@ -32,6 +59,12 @@ const Navbar = () => {
             Store
           </Link>
           <div className="flex items-center gap-4">
+            {userName && (
+              <div className="flex items-center gap-2 text-sm">
+                <User className="h-4 w-4" />
+                <span>{userName}</span>
+              </div>
+            )}
             <Link
               to="/cart"
               className="p-2 hover:bg-secondary/10 rounded-full transition-colors relative"
