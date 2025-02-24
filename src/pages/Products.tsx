@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,29 +11,23 @@ import EditProduct from "@/components/EditProduct";
 
 const Products = () => {
   const { toast } = useToast();
-  const [sortBy, setSortBy] = useState("featured");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
   const { data: products, refetch } = useQuery({
-    queryKey: ["products"],
+    queryKey: ["user-products"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
       const { data, error } = await supabase
         .from("products")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
-    },
-  });
-
-  const { data: currentUser } = useQuery({
-    queryKey: ["currentUser"],
-    queryFn: async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
-      return user;
     },
   });
 
@@ -60,36 +54,18 @@ const Products = () => {
     }
   };
 
-  const addToCart = (productId: string) => {
-    toast({
-      title: "Added to cart",
-      description: "This item has been added to your cart.",
-    });
-  };
-
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-medium">Products</h1>
-        <div className="flex items-center gap-4">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="border rounded-md px-3 py-2"
-          >
-            <option value="featured">Featured</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-          </select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCreateForm(!showCreateForm)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {showCreateForm ? "Hide Form" : "Add Product"}
-          </Button>
-        </div>
+        <h1 className="text-3xl font-medium">My Products</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCreateForm(!showCreateForm)}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {showCreateForm ? "Hide Form" : "Add Product"}
+        </Button>
       </div>
 
       {showCreateForm && (
@@ -127,27 +103,19 @@ const Products = () => {
               <div className="flex items-center justify-between">
                 <span className="text-lg font-medium">${product.price}</span>
                 <div className="flex gap-2">
-                  {currentUser?.id === product.user_id && (
-                    <>
-                      <Button
-                        onClick={() => setEditingProduct(product)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        onClick={() => deleteProduct(product.id)}
-                        size="sm"
-                        variant="destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                  <Button onClick={() => addToCart(product.id)} size="sm">
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Add to Cart
+                  <Button
+                    onClick={() => setEditingProduct(product)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={() => deleteProduct(product.id)}
+                    size="sm"
+                    variant="destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
