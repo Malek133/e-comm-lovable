@@ -10,20 +10,54 @@ const CreateProduct = ({ onProductCreated }: { onProductCreated: () => void }) =
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${crypto.randomUUID()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      if (!imageFile) {
+        throw new Error("Please select an image");
+      }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("You must be logged in to create a product");
+      }
+
+      // Upload image first
+      const imageUrl = await uploadImage(imageFile);
+
+      // Create product with image URL and user_id
       const { error } = await supabase.from("products").insert([
         {
           title,
           price: parseFloat(price),
           image_url: imageUrl,
           description,
+          user_id: user.id,
         },
       ]);
 
@@ -37,7 +71,7 @@ const CreateProduct = ({ onProductCreated }: { onProductCreated: () => void }) =
       // Reset form
       setTitle("");
       setPrice("");
-      setImageUrl("");
+      setImageFile(null);
       setDescription("");
       
       // Trigger refetch of products
@@ -72,10 +106,9 @@ const CreateProduct = ({ onProductCreated }: { onProductCreated: () => void }) =
         required
       />
       <Input
-        type="url"
-        placeholder="Image URL"
-        value={imageUrl}
-        onChange={(e) => setImageUrl(e.target.value)}
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
         required
       />
       <Input
