@@ -2,16 +2,18 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Plus } from "lucide-react";
+import { ShoppingCart, Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import CreateProduct from "@/components/CreateProduct";
+import EditProduct from "@/components/EditProduct";
 
 const Products = () => {
   const { toast } = useToast();
   const [sortBy, setSortBy] = useState("featured");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
 
   const { data: products, refetch } = useQuery({
     queryKey: ["products"],
@@ -25,6 +27,38 @@ const Products = () => {
       return data;
     },
   });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      return user;
+    },
+  });
+
+  const deleteProduct = async (productId: string) => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
+      refetch();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
 
   const addToCart = (productId: string) => {
     toast({
@@ -63,6 +97,19 @@ const Products = () => {
           <CreateProduct onProductCreated={refetch} />
         </Card>
       )}
+
+      {editingProduct && (
+        <Card className="p-4">
+          <EditProduct
+            product={editingProduct}
+            onProductUpdated={() => {
+              refetch();
+              setEditingProduct(null);
+            }}
+            onCancel={() => setEditingProduct(null)}
+          />
+        </Card>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products?.map((product) => (
@@ -79,10 +126,30 @@ const Products = () => {
               <p className="text-sm text-gray-600">{product.description}</p>
               <div className="flex items-center justify-between">
                 <span className="text-lg font-medium">${product.price}</span>
-                <Button onClick={() => addToCart(product.id)} size="sm">
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add to Cart
-                </Button>
+                <div className="flex gap-2">
+                  {currentUser?.id === product.user_id && (
+                    <>
+                      <Button
+                        onClick={() => setEditingProduct(product)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={() => deleteProduct(product.id)}
+                        size="sm"
+                        variant="destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                  <Button onClick={() => addToCart(product.id)} size="sm">
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Add to Cart
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
