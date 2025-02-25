@@ -11,6 +11,8 @@ const Cart = () => {
   const cartItems = useSelector((state: RootState) => state.cart.items);
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  console.log("Cart items from Redux store:", cartItems);
+
   const handleQuantityChange = (id: string, newQuantity: number) => {
     if (newQuantity > 0) {
       dispatch(updateQuantity({ id, quantity: newQuantity }));

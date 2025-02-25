@@ -5,12 +5,14 @@ import { ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "@/store/cartSlice";
+import { RootState } from "@/store";
 
 const Store = () => {
   const { toast } = useToast();
   const dispatch = useDispatch();
+  const cartItems = useSelector((state: RootState) => state.cart.items);
 
   const { data: products } = useQuery({
     queryKey: ["all-products"],
@@ -32,6 +34,9 @@ const Store = () => {
       price: product.price,
       image_url: product.image_url,
     }));
+    
+    console.log("Adding to cart:", product);
+    console.log("Current cart items:", cartItems);
     
     toast({
       title: "Added to cart",
