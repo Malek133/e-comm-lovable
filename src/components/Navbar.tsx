@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { ShoppingBag, LogOut, User } from "lucide-react";
+import { ShoppingBag, LogOut, User, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -11,13 +11,15 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [userName, setUserName] = useState<string>("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const getProfile = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        setIsAuthenticated(!!session);
+        
         if (!session) {
-          navigate("/auth");
           return;
         }
 
@@ -35,7 +37,16 @@ const Navbar = () => {
     };
 
     getProfile();
-  }, [navigate]);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
+      if (!session) {
+        setUserName("");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -59,11 +70,24 @@ const Navbar = () => {
             Store
           </Link>
           <div className="flex items-center gap-4">
-            {userName && (
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4" />
-                <span>{userName}</span>
-              </div>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/my-products"
+                  className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
+                >
+                  <Package className="h-4 w-4" />
+                  My Products
+                </Link>
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4" />
+                  <span>{userName}</span>
+                </div>
+              </>
+            ) : (
+              <Link to="/auth" className="text-sm hover:text-primary transition-colors">
+                Sign In
+              </Link>
             )}
             <Link
               to="/cart"
@@ -74,9 +98,11 @@ const Navbar = () => {
                 0
               </span>
             </Link>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="h-5 w-5" />
-            </Button>
+            {isAuthenticated && (
+              <Button variant="ghost" size="icon" onClick={handleLogout}>
+                <LogOut className="h-5 w-5" />
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -85,3 +111,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

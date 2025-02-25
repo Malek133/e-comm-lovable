@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
@@ -9,10 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Store = () => {
   const { toast } = useToast();
-  const [sortBy, setSortBy] = useState("featured");
 
   const { data: products } = useQuery({
-    queryKey: ["products"],
+    queryKey: ["all-products"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
@@ -33,19 +31,7 @@ const Store = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-medium">Store</h1>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="border rounded-md px-3 py-2"
-        >
-          <option value="featured">Featured</option>
-          <option value="price-asc">Price: Low to High</option>
-          <option value="price-desc">Price: High to Low</option>
-        </select>
-      </div>
-      
+      <h1 className="text-3xl font-medium">Store</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products?.map((product) => (
           <Card key={product.id} className="overflow-hidden group">
@@ -75,3 +61,4 @@ const Store = () => {
 };
 
 export default Store;
+
