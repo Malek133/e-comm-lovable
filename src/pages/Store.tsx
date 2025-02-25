@@ -14,7 +14,12 @@ const Store = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(`
+          *,
+          profiles:user_id (
+            full_name
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -45,6 +50,9 @@ const Store = () => {
             <div className="p-6 space-y-4">
               <h3 className="text-lg font-medium">{product.title}</h3>
               <p className="text-sm text-gray-600">{product.description}</p>
+              <p className="text-sm text-gray-500">
+                Created by {product.profiles?.full_name || "Unknown User"}
+              </p>
               <div className="flex items-center justify-between">
                 <span className="text-lg font-medium">${product.price}</span>
                 <Button onClick={() => addToCart(product.id)} size="sm">
@@ -61,4 +69,3 @@ const Store = () => {
 };
 
 export default Store;
-
