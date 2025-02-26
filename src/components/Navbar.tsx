@@ -1,115 +1,95 @@
 
-import { Link } from "react-router-dom";
-import { ShoppingBag, LogOut, User, Package } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ShoppingCart, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [userName, setUserName] = useState<string>("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const cartItems = useSelector((state: RootState) => state.cart.items);
-  
-  // Calculate total quantity of items in cart
-  const cartItemsCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
 
   useEffect(() => {
-    const getProfile = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setIsAuthenticated(!!session);
-        
-        if (!session) {
-          return;
-        }
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
 
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("username, full_name")
-          .eq("id", session.user.id)
+      if (session?.user) {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
           .single();
-
-        if (error) throw error;
-        setUserName(profile.full_name || profile.username);
-      } catch (error: any) {
-        console.error("Error fetching profile:", error.message);
+        
+        setIsAdmin(roleData?.role === "admin");
       }
     };
 
-    getProfile();
+    checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-      if (!session) {
-        setUserName("");
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setIsLoggedIn(!!session);
+      if (session?.user) {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+        
+        setIsAdmin(roleData?.role === "admin");
+      } else {
+        setIsAdmin(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      navigate("/auth");
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    }
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
   return (
     <nav className="border-b">
-      <div className="container mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="text-xl font-semibold hover:text-primary transition-colors">
-            Store
-          </Link>
-          <div className="flex items-center gap-4">
-            {isAuthenticated ? (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16 items-center">
+          <div className="flex">
+            <Link to="/" className="text-xl font-bold">
+              Store
+            </Link>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {isLoggedIn ? (
               <>
-                <Link
-                  to="/my-products"
-                  className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
-                >
-                  <Package className="h-4 w-4" />
-                  My Products
+                {isAdmin && (
+                  <Link to="/store">
+                    <Button variant="outline">Manage Products</Button>
+                  </Link>
+                )}
+                <Link to="/cart" className="relative">
+                  <Button variant="outline" size="icon">
+                    <ShoppingCart className="h-5 w-5" />
+                    {cartItemCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                        {cartItemCount}
+                      </span>
+                    )}
+                  </Button>
                 </Link>
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4" />
-                  <span>{userName}</span>
-                </div>
+                <Button variant="outline" size="icon" onClick={handleLogout}>
+                  <LogOut className="h-5 w-5" />
+                </Button>
               </>
             ) : (
-              <Link to="/auth" className="text-sm hover:text-primary transition-colors">
-                Sign In
+              <Link to="/auth">
+                <Button>Login</Button>
               </Link>
-            )}
-            <Link
-              to="/cart"
-              className="p-2 hover:bg-secondary/10 rounded-full transition-colors relative"
-            >
-              <ShoppingBag className="h-6 w-6" />
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItemsCount}
-                </span>
-              )}
-            </Link>
-            {isAuthenticated && (
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
-                <LogOut className="h-5 w-5" />
-              </Button>
             )}
           </div>
         </div>
