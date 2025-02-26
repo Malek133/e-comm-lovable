@@ -13,12 +13,21 @@ const Products = () => {
   const { toast } = useToast();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const { data: products, refetch } = useQuery({
     queryKey: ["user-products"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      setIsAdmin(roleData?.role === "admin");
 
       const { data, error } = await supabase
         .from("products")
@@ -53,6 +62,17 @@ const Products = () => {
       });
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+        <h1 className="text-2xl font-medium text-gray-600">Access Denied</h1>
+        <p className="text-gray-500">
+          You need administrator privileges to manage products.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
