@@ -10,11 +10,12 @@ import { useState } from "react";
 
 type Product = {
   id: string;
-  name: string;
+  title: string;
   description: string;
   price: number;
   image_url: string;
   created_at: string;
+  user_id: string;
 };
 
 const Products = () => {
@@ -66,11 +67,11 @@ const Products = () => {
             <div className="aspect-square relative mb-4">
               <img
                 src={product.image_url || "/placeholder.svg"}
-                alt={product.name}
+                alt={product.title}
                 className="object-cover rounded-lg w-full h-full"
               />
             </div>
-            <h2 className="text-xl font-semibold">{product.name}</h2>
+            <h2 className="text-xl font-semibold">{product.title}</h2>
             <p className="text-gray-600 mt-2">{product.description}</p>
             <p className="text-lg font-bold mt-2">${product.price}</p>
             <div className="flex gap-2 mt-4">
@@ -89,9 +90,7 @@ const Products = () => {
       </div>
 
       <CreateProduct
-        open={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={() => {
+        onProductCreated={() => {
           setIsCreateModalOpen(false);
           refetch();
         }}
