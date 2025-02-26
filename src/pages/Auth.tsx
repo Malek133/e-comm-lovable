@@ -60,7 +60,7 @@ const Auth = () => {
       });
 
       if (error) throw error;
-      navigate("/store");
+      navigate("/");
     } catch (error: any) {
       toast({
         variant: "destructive",
