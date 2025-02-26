@@ -6,12 +6,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [userName, setUserName] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const cartItems = useSelector((state: RootState) => state.cart.items);
+  
+  // Calculate total quantity of items in cart
+  const cartItemsCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
     const getProfile = async () => {
@@ -94,9 +100,11 @@ const Navbar = () => {
               className="p-2 hover:bg-secondary/10 rounded-full transition-colors relative"
             >
               <ShoppingBag className="h-6 w-6" />
-              <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                0
-              </span>
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
             </Link>
             {isAuthenticated && (
               <Button variant="ghost" size="icon" onClick={handleLogout}>
@@ -111,4 +119,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
